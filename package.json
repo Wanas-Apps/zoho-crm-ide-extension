@@ -1,0 +1,536 @@
+{
+  "name": "zoho-crm-ide-extension",
+  "displayName": "Zoho CRM IDE Extension",
+  "description": "Turn VS Code into a Zoho CRM IDE: Deluge language IntelliSense, in-editor Zoho login, org metadata sync, and Run/Pull/Push for standalone functions.",
+  "version": "0.7.3",
+  "publisher": "wanas-apps",
+  "author": {
+    "name": "Wanas Apps",
+    "email": "support@wanasapps.com",
+    "url": "https://www.wanasapps.com"
+  },
+  "license": "MIT",
+  "icon": "images/deluge-icon.png",
+  "keywords": [
+    "deluge",
+    "zoho",
+    "zoho crm",
+    "zoho creator",
+    "intellisense"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wanas-apps/zoho-crm-ide-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wanas-apps/zoho-crm-ide-extension/issues"
+  },
+  "homepage": "https://github.com/wanas-apps/zoho-crm-ide-extension#readme",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Formatters",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:deluge",
+    "onStartupFinished",
+    "onCommand:zohoDeluge.runFunction",
+    "onCommand:zohoDeluge.pullFunction",
+    "onCommand:zohoDeluge.pushFunction",
+    "onCommand:zohoDeluge.createFunction",
+    "onUri"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "authentication": [
+      {
+        "id": "zoho",
+        "label": "Zoho CRM"
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "zohoDeluge.mcpProvider",
+        "label": "Zoho CRM IDE"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "zohoDeluge",
+          "title": "Zoho CRM IDE",
+          "icon": "images/zoho-activitybar.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "zohoDelugePanel",
+          "title": "Zoho CRM",
+          "icon": "images/zoho-activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "zohoDeluge": [
+        {
+          "id": "zohoDeluge.connectionView",
+          "name": "Connection",
+          "icon": "images/zoho-activitybar.svg"
+        },
+        {
+          "id": "zohoDeluge.functionsView",
+          "name": "Functions",
+          "icon": "images/zoho-activitybar.svg"
+        },
+        {
+          "id": "zohoDeluge.modulesView",
+          "name": "Modules & Fields",
+          "icon": "images/zoho-activitybar.svg"
+        }
+      ],
+      "zohoDelugePanel": [
+        {
+          "id": "zohoDeluge.runHistoryView",
+          "name": "Run History",
+          "icon": "images/zoho-activitybar.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "zohoDeluge.connectionView",
+        "contents": "Connect VS Code to your Zoho CRM org to enable org-aware IntelliSense, metadata sync, and Run/Pull/Push for standalone functions.\n[Sign in to Zoho CRM](command:zohoDeluge.login)\nNo setup needed — sign in with the bundled connector. Advanced users can switch to their own Zoho app credentials in settings.",
+        "when": "!zohoDeluge.loggedIn"
+      },
+      {
+        "view": "zohoDeluge.functionsView",
+        "contents": "No functions loaded yet.\n[Pull metadata from Zoho](command:zohoDeluge.pullMetadata)",
+        "when": "zohoDeluge.loggedIn"
+      },
+      {
+        "view": "zohoDeluge.functionsView",
+        "contents": "Sign in to load your org's functions.\n[Sign in to Zoho CRM](command:zohoDeluge.login)",
+        "when": "!zohoDeluge.loggedIn"
+      },
+      {
+        "view": "zohoDeluge.modulesView",
+        "contents": "No modules loaded yet.\n[Pull metadata from Zoho](command:zohoDeluge.pullMetadata)",
+        "when": "zohoDeluge.loggedIn"
+      },
+      {
+        "view": "zohoDeluge.modulesView",
+        "contents": "Sign in to load your org's modules and fields.\n[Sign in to Zoho CRM](command:zohoDeluge.login)",
+        "when": "!zohoDeluge.loggedIn"
+      },
+      {
+        "view": "zohoDeluge.runHistoryView",
+        "contents": "No function runs yet. Open a standalone function and use Run (Live) — results appear here."
+      }
+    ],
+    "commands": [
+      {
+        "command": "zohoDeluge.login",
+        "title": "Sign in to Zoho CRM",
+        "category": "Zoho CRM IDE"
+      },
+      {
+        "command": "zohoDeluge.logout",
+        "title": "Sign out of Zoho CRM",
+        "category": "Zoho CRM IDE"
+      },
+      {
+        "command": "zohoDeluge.showAccount",
+        "title": "Account…",
+        "category": "Zoho CRM IDE",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "zohoDeluge.pullMetadata",
+        "title": "Pull Metadata from Zoho CRM",
+        "category": "Zoho CRM IDE",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "zohoDeluge.showOutput",
+        "title": "Show Output Log",
+        "category": "Zoho CRM IDE"
+      },
+      {
+        "command": "zohoDeluge.runFunction",
+        "title": "Run Function (Live)",
+        "category": "Zoho CRM IDE",
+        "icon": "$(play)"
+      },
+      {
+        "command": "zohoDeluge.pullFunction",
+        "title": "Pull Function from Zoho",
+        "category": "Zoho CRM IDE",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "zohoDeluge.pushFunction",
+        "title": "Push Function to Zoho",
+        "category": "Zoho CRM IDE",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "zohoDeluge.createFunction",
+        "title": "Create Standalone Function",
+        "category": "Zoho CRM IDE",
+        "icon": "$(add)"
+      },
+      {
+        "command": "zohoDeluge.cleanupTestArtifacts",
+        "title": "Clean Up Test Artifacts & Backups",
+        "category": "Zoho CRM IDE",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "zohoDeluge.refreshViews",
+        "title": "Refresh Zoho Views",
+        "category": "Zoho CRM IDE",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "zohoDeluge.refreshSourceControl",
+        "title": "Refresh Modified Functions",
+        "category": "Zoho CRM IDE",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "zohoDeluge.openFunctionDiff",
+        "title": "Open Changes (Live ↔ Local)",
+        "category": "Zoho CRM IDE",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "zohoDeluge.copyMcpConfig",
+        "title": "Copy MCP Server Config",
+        "category": "Zoho CRM IDE",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "zohoDeluge.restartMcpServer",
+        "title": "Restart MCP Server",
+        "category": "Zoho CRM IDE",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "zohoDeluge.enableExternalMcp",
+        "title": "Enable External MCP Access (Export Session)",
+        "category": "Zoho CRM IDE",
+        "icon": "$(key)"
+      },
+      {
+        "command": "zohoDeluge.copyAntigravityConfig",
+        "title": "Copy Antigravity (stdio) MCP Config",
+        "category": "Zoho CRM IDE",
+        "icon": "$(copy)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "zohoDeluge.runFunction",
+          "group": "navigation@1",
+          "when": "resourceLangId == deluge && zohoDeluge.loggedIn && zohoDeluge.isStandaloneFn"
+        },
+        {
+          "command": "zohoDeluge.pullFunction",
+          "group": "navigation@2",
+          "when": "resourceLangId == deluge && zohoDeluge.loggedIn && zohoDeluge.isStandaloneFn"
+        },
+        {
+          "command": "zohoDeluge.pushFunction",
+          "group": "navigation@3",
+          "when": "resourceLangId == deluge && zohoDeluge.loggedIn && zohoDeluge.isStandaloneFn"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "zohoDeluge.runFunction",
+          "when": "resourceLangId == deluge && zohoDeluge.loggedIn && zohoDeluge.isStandaloneFn"
+        },
+        {
+          "command": "zohoDeluge.pullFunction",
+          "when": "resourceLangId == deluge && zohoDeluge.loggedIn && zohoDeluge.isStandaloneFn"
+        },
+        {
+          "command": "zohoDeluge.pushFunction",
+          "when": "resourceLangId == deluge && zohoDeluge.loggedIn && zohoDeluge.isStandaloneFn"
+        },
+        {
+          "command": "zohoDeluge.createFunction",
+          "when": "zohoDeluge.loggedIn"
+        },
+        {
+          "command": "zohoDeluge.refreshViews",
+          "when": "false"
+        },
+        {
+          "command": "zohoDeluge.openFunctionDiff",
+          "when": "resourceLangId == deluge && zohoDeluge.loggedIn && zohoDeluge.isStandaloneFn"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "zohoDeluge.refreshSourceControl",
+          "group": "navigation",
+          "when": "scmProvider == zohoDeluge"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "zohoDeluge.openFunctionDiff",
+          "group": "inline",
+          "when": "scmProvider == zohoDeluge && scmResourceGroup == modified"
+        },
+        {
+          "command": "zohoDeluge.pushFunction",
+          "group": "1_modification@1",
+          "when": "scmProvider == zohoDeluge && scmResourceGroup == modified"
+        },
+        {
+          "command": "zohoDeluge.openFunctionDiff",
+          "group": "1_modification@2",
+          "when": "scmProvider == zohoDeluge && scmResourceGroup == modified"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "zohoDeluge.showAccount",
+          "group": "navigation@1",
+          "when": "view == zohoDeluge.connectionView && zohoDeluge.loggedIn"
+        },
+        {
+          "command": "zohoDeluge.createFunction",
+          "group": "navigation@1",
+          "when": "view == zohoDeluge.functionsView && zohoDeluge.loggedIn"
+        },
+        {
+          "command": "zohoDeluge.pullMetadata",
+          "group": "navigation@2",
+          "when": "(view == zohoDeluge.functionsView || view == zohoDeluge.modulesView) && zohoDeluge.loggedIn"
+        },
+        {
+          "command": "zohoDeluge.refreshViews",
+          "group": "navigation@3",
+          "when": "view == zohoDeluge.connectionView || view == zohoDeluge.functionsView || view == zohoDeluge.modulesView"
+        },
+        {
+          "command": "zohoDeluge.cleanupTestArtifacts",
+          "group": "navigation@1",
+          "when": "view == zohoDeluge.runHistoryView"
+        },
+        {
+          "command": "zohoDeluge.refreshViews",
+          "group": "navigation@2",
+          "when": "view == zohoDeluge.runHistoryView"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "zohoDeluge.runFunction",
+          "group": "inline@1",
+          "when": "view == zohoDeluge.functionsView && viewItem == zohoFunction"
+        },
+        {
+          "command": "zohoDeluge.pullFunction",
+          "group": "inline@2",
+          "when": "view == zohoDeluge.functionsView && viewItem == zohoFunction"
+        },
+        {
+          "command": "zohoDeluge.pushFunction",
+          "group": "inline@3",
+          "when": "view == zohoDeluge.functionsView && viewItem == zohoFunction"
+        },
+        {
+          "command": "zohoDeluge.pullFunction",
+          "group": "inline@1",
+          "when": "view == zohoDeluge.functionsView && viewItem == zohoFunctionOther"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "deluge",
+        "aliases": [
+          "Deluge",
+          "deluge"
+        ],
+        "extensions": [
+          ".dg",
+          ".deluge",
+          ".ds"
+        ],
+        "icon": {
+          "light": "./images/deluge-icon.png",
+          "dark": "./images/deluge-icon.png"
+        },
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "zoho-output",
+        "aliases": [
+          "Zoho Output"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "deluge",
+        "scopeName": "source.deluge",
+        "path": "./syntaxes/deluge.tmLanguage.json"
+      },
+      {
+        "language": "zoho-output",
+        "scopeName": "source.zoho-output",
+        "path": "./syntaxes/zoho-output.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "deluge",
+        "path": "./snippets/deluge.json"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Deluge",
+        "properties": {
+          "deluge.lint.enable": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable Deluge linting (diagnostics). When off, no diagnostics are produced."
+          },
+          "deluge.lint.missingSemicolon": {
+            "type": "boolean",
+            "default": true,
+            "description": "Warn when a statement appears to be missing a terminating ';'."
+          },
+          "deluge.lint.invalidKeywords": {
+            "type": "boolean",
+            "default": true,
+            "description": "Flag Deluge-invalid keywords and operators: while/do loops, throw (vs throws), finally, and the word operators and/or/not."
+          },
+          "deluge.lint.divideByZero": {
+            "type": "boolean",
+            "default": true,
+            "description": "Warn on division by a literal zero."
+          }
+        }
+      },
+      {
+        "title": "Zoho CRM IDE — Connection",
+        "properties": {
+          "zohoDeluge.authProxyUrl": {
+            "type": "string",
+            "default": "",
+            "scope": "machine",
+            "markdownDescription": "URL of a backend **OAuth proxy** (e.g. a Catalyst Advanced I/O function) that holds the Zoho app's Client Secret server-side. In **proxy mode** sign-in only asks for your data center — no Client ID / Secret needed, and nothing secret is stored locally. **This build ships with a default proxy, so proxy mode is on out of the box** — leave this blank to use it. Set this only to point at *your own* proxy instead (with `zohoDeluge.authProxyToken` if it requires a shared secret)."
+          },
+          "zohoDeluge.authProxyToken": {
+            "type": "string",
+            "default": "",
+            "scope": "machine",
+            "markdownDescription": "Optional shared secret sent as the `x-proxy-token` header to the OAuth proxy (must match the proxy's `PROXY_SHARED_SECRET`). Only used when `zohoDeluge.authProxyUrl` is set. Stored in user (machine) settings, never in the project."
+          },
+          "zohoDeluge.clientId": {
+            "type": "string",
+            "default": "",
+            "scope": "resource",
+            "markdownDescription": "**Bring-Your-Own-credentials mode only.** Not needed for the default proxy sign-in — leave blank. Set this only if you switch off the bundled proxy (by pointing `zohoDeluge.authProxyUrl` at your own proxy that doesn't advertise a client_id, or running a BYO build): your Zoho **Server-based** application's Client ID for this workspace folder. The matching Client Secret is entered during sign-in and stored securely in the OS keychain — never here."
+          },
+          "zohoDeluge.dc": {
+            "type": "string",
+            "default": "com",
+            "scope": "resource",
+            "enum": [
+              "com",
+              "eu",
+              "in",
+              "jp",
+              "com.au",
+              "com.cn",
+              "ca",
+              "sa"
+            ],
+            "description": "Zoho data center for this workspace folder's org (the domain suffix, e.g. 'com' for zoho.com, 'eu' for zoho.eu)."
+          },
+          "zohoDeluge.scopes": {
+            "type": "string",
+            "default": "",
+            "scope": "resource",
+            "description": "Optional override of the OAuth scopes requested at sign-in (comma-separated). Leave blank to use the recommended ZohoCRM scope set."
+          },
+          "zohoDeluge.loopbackPorts": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "default": [
+              3000,
+              3737,
+              8980
+            ],
+            "scope": "machine",
+            "markdownDescription": "Local ports the sign-in loopback server may bind, tried in order — the first free one is used. **Each port used MUST be registered as an Authorized Redirect URI** (`http://127.0.0.1:<port>/zoho/callback`) in the Zoho app. In proxy mode the proxy's Zoho app fixes which ports are allowed, so set this to exactly those (e.g. `[3000]` if only port 3000 is registered)."
+          },
+          "zohoDeluge.concurrency": {
+            "type": "number",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 25,
+            "scope": "resource",
+            "description": "Maximum simultaneous Zoho CRM API requests during metadata pulls (Zoho enforces a per-org concurrency limit of 5–25 by edition)."
+          },
+          "zohoDeluge.autoPullOnSignIn": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "description": "Automatically pull this org's metadata into the workspace folder right after signing in."
+          },
+          "zohoDeluge.pullRecordCounts": {
+            "type": "boolean",
+            "default": false,
+            "scope": "resource",
+            "markdownDescription": "Include per-module **record counts** when pulling. This reads record data and costs roughly **50 Zoho API credits per module** — off by default (metadata-only pulls are free of record-data access)."
+          },
+          "zohoDeluge.testArtifacts.retention": {
+            "type": "number",
+            "default": 20,
+            "minimum": 0,
+            "scope": "resource",
+            "markdownDescription": "How many recent test-run artifacts (`crm/function_tests/*.json`) and pre-overwrite backups (`.zcrm/.backups/*.ds`) to keep per function when running **Clean Up Test Artifacts & Backups**. `0` keeps all."
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile && node esbuild.js --production",
+    "compile": "tsc -p ./",
+    "bundle": "node esbuild.js",
+    "bundle:meta": "node esbuild.js --metafile",
+    "package": "vsce package --no-rewrite-relative-links",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc -p ./ --noEmit",
+    "test": "npm run compile && node test/run-tests.js && node test/zoho-foundation.test.js && node test/zoho-login.test.js && node test/zoho-proxy.test.js && node test/zoho-sync.test.js && node test/zoho-index.test.js && node test/zoho-conflict.test.js && node test/zoho-functionops.test.js && node test/zoho-hardening.test.js && node test/zoho-mcp.test.js && node test/zoho-mcp-e2e.probe.js && node esbuild.js && node test/zoho-mcp-stdio.probe.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@wanasapps/zcrm-core": "^0.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "18.x",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.1.3"
+  }
+}

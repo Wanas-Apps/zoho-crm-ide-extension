@@ -1,0 +1,6 @@
+string standalone.wanas()
+{
+    info "hello world";
+    info zoho.crm.getRecordById("Leads","1234567890123456789");
+    return "wanas";
+}

@@ -1,0 +1,14 @@
+{
+  "name": "zoho_oauth_proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OAuth token-exchange proxy for the Zoho CRM IDE Extension — Catalyst Advanced I/O function (Express). Holds the Zoho client secret server-side; opt-in user capture to Data Store.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "zcatalyst-sdk-node": "^1.0.0"
+  }
+}

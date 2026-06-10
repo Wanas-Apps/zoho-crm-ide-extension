@@ -1,0 +1,32 @@
+.vscode/**
+.vscode-test/**
+.claude/**
+.github/**
+test/**
+out/**
+dist/**/*.map
+dist/metafile.json
+src/**
+node_modules/**
+docs/**
+esbuild.js
+.gitignore
+.gitattributes
+tsconfig.json
+package-lock.json
+*.vsix
+CONTRIBUTING.md
+# Zoho org / CLI runtime artifacts — NEVER ship these. They are pulled-org data
+# created by running a metadata pull in this folder and can contain live secrets
+# (e.g. API keys in function source / connection variables).
+.zcrm/**
+crm/**
+.zcrmignore
+zcrm-project.json
+meta.json
+# Vector logo sources — the README/marketplace use images/WanasApps-logo.png
+# (vsce forbids SVG in README); the activity-bar icon SVG still ships.
+WanasApps-logo.svg
+images/WanasApps-logo.svg
+# Backend OAuth proxy — a separate Catalyst AppSail service, not part of the extension.
+oauth-proxy/**

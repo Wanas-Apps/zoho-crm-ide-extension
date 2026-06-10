@@ -1,0 +1,122 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Deluge",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#system-variables" },
+    { "include": "#keywords" },
+    { "include": "#constants" },
+    { "include": "#numbers" },
+    { "include": "#strings" },
+    { "include": "#builtin-functions" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.deluge",
+          "match": "\\b(if|else if|else|for each|break|continue|return|try|catch|throws|in)\\b"
+        },
+        {
+          "name": "keyword.other.deluge",
+          "match": "\\b(info|sendmail|invokeurl|invokeUrl|invokeapi|invokeAPI|openUrl|postUrl|getUrl|insert|update|delete)\\b"
+        },
+        {
+          "name": "storage.type.deluge",
+          "match": "\\b(int|long|decimal|float|double|bigint|string|text|bool|boolean|list|map|key|collection|date|time|datetime|void|file|xml)\\b"
+        }
+      ]
+    },
+    "system-variables": {
+      "patterns": [
+        {
+          "name": "variable.language.deluge",
+          "match": "\\b(zoho\\.(currentdate|currenttime|loginuser(\\.name)?|loginuserid|adminuser|adminuserid|appname|appuri|environment|ipaddress|device\\.type))\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.deluge",
+          "match": "\\b(true|false|null)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.deluge",
+          "match": "\\b([0-9]+\\.[0-9]+|[0-9]+)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.deluge",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.deluge",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.deluge",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.deluge",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.deluge",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.deluge",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "builtin-functions": {
+      "patterns": [
+        {
+          "name": "support.function.deluge",
+          "match": "\\b(zoho)(\\.[a-zA-Z0-9_]+)+\\b"
+        },
+        {
+          "match": "\\.([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()",
+          "captures": {
+            "1": { "name": "support.function.member.deluge" }
+          }
+        },
+        {
+          "name": "entity.name.function.deluge",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.deluge",
+          "match": "(\\+=|-=|\\*=|/=|%=|==|!=|<=|>=|&&|\\|\\||[=<>+\\-*/%!?:])"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.deluge"
+}

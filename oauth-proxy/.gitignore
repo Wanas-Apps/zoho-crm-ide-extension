@@ -1,0 +1,4 @@
+node_modules/
+.catalyst/
+*.log
+.env

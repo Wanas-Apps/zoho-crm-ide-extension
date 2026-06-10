@@ -1,0 +1,167 @@
+{
+	"For Each Loop": {
+		"prefix": "foreach",
+		"body": [
+			"for each ${1:item} in ${2:list}",
+			"{",
+			"\t$0",
+			"}"
+		],
+		"description": "Iterate over each element of a list with a for each loop."
+	},
+	"If Block": {
+		"prefix": "if",
+		"body": [
+			"if (${1:condition})",
+			"{",
+			"\t$0",
+			"}"
+		],
+		"description": "If block."
+	},
+	"If Else Block": {
+		"prefix": "ifelse",
+		"body": [
+			"if (${1:condition})",
+			"{",
+			"\t$2",
+			"}",
+			"else",
+			"{",
+			"\t$0",
+			"}"
+		],
+		"description": "If / else block."
+	},
+	"Try Catch": {
+		"prefix": "trycatch",
+		"body": [
+			"try",
+			"{",
+			"\t$1",
+			"}",
+			"catch (${2:e})",
+			"{",
+			"\tinfo ${2:e};",
+			"\t$0",
+			"}"
+		],
+		"description": "Try / catch block with the exception logged via info."
+	},
+	"Invoke URL (GET)": {
+		"prefix": "invokeurlget",
+		"body": [
+			"${1:response} = invokeurl",
+			"[",
+			"\turl : \"${2:https://example.com/api}\"",
+			"\ttype : GET",
+			"\tconnection : \"${3:my_connection}\"",
+			"];",
+			"$0"
+		],
+		"description": "Make a GET request with invokeurl."
+	},
+	"Invoke URL (POST)": {
+		"prefix": "invokeurlpost",
+		"body": [
+			"${1:params} = Map();",
+			"${1:params}.put(\"${2:key}\", ${3:value});",
+			"${4:response} = invokeurl",
+			"[",
+			"\turl : \"${5:https://example.com/api}\"",
+			"\ttype : POST",
+			"\tparameters : ${1:params}",
+			"\tconnection : \"${6:my_connection}\"",
+			"];",
+			"$0"
+		],
+		"description": "Make a POST request with invokeurl, including parameters and a connection."
+	},
+	"Invoke API": {
+		"prefix": "invokeapi",
+		"body": [
+			"${1:response} = invokeapi",
+			"[",
+			"\tservice : ${2:ZohoCRM}",
+			"\tpath : \"${3:crm/v3/Leads}\"",
+			"\ttype : ${4:GET}",
+			"\tconnection : \"${5:my_connection}\"",
+			"];",
+			"$0"
+		],
+		"description": "Call a Zoho service with invokeapi using service and path."
+	},
+	"Send Mail": {
+		"prefix": "sendmail",
+		"body": [
+			"sendmail",
+			"[",
+			"\tfrom : zoho.adminuserid",
+			"\tto : \"${1:recipient@example.com}\"",
+			"\tsubject : \"${2:Subject}\"",
+			"\tmessage : \"${3:Message body}\"",
+			"];",
+			"$0"
+		],
+		"description": "Send an email with the sendmail task."
+	},
+	"Info": {
+		"prefix": "info",
+		"body": [
+			"info ${1:value};"
+		],
+		"description": "Print a value to the console with info."
+	},
+	"Get Record By Id": {
+		"prefix": "getrecord",
+		"body": [
+			"${3:record} = zoho.crm.getRecordById(\"${1:Module}\", ${2:recordId});",
+			"$0"
+		],
+		"description": "Fetch a single CRM record by its id."
+	},
+	"Search Records": {
+		"prefix": "searchrecords",
+		"body": [
+			"${3:records} = zoho.crm.searchRecords(\"${1:Module}\", \"${2:(Field:equals:value)}\");",
+			"$0"
+		],
+		"description": "Search CRM records using search criteria."
+	},
+	"Create Record": {
+		"prefix": "createrecord",
+		"body": [
+			"${2:dataMap} = Map();",
+			"${2:dataMap}.put(\"${3:Field}\", ${4:value});",
+			"${5:response} = zoho.crm.createRecord(\"${1:Module}\", ${2:dataMap});",
+			"$0"
+		],
+		"description": "Build a data map and create a CRM record."
+	},
+	"Update Record": {
+		"prefix": "updaterecord",
+		"body": [
+			"${4:response} = zoho.crm.updateRecord(\"${1:Module}\", ${2:recordId}, ${3:dataMap});",
+			"$0"
+		],
+		"description": "Update an existing CRM record by id."
+	},
+	"New Map": {
+		"prefix": "mapnew",
+		"body": [
+			"${1:myMap} = Map();",
+			"${1:myMap}.put(\"${2:key}\", ${3:value});",
+			"$0"
+		],
+		"description": "Create a Map and put a key/value pair."
+	},
+	"New List": {
+		"prefix": "listnew",
+		"body": [
+			"${1:myList} = List();",
+			"${1:myList}.add(${2:value});",
+			"$0"
+		],
+		"description": "Create a List and add an element."
+	}
+}

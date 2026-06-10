@@ -1,0 +1,12 @@
+{
+  "meta_directory": [
+    {
+      "path": "crm",
+      "default": true
+    }
+  ],
+  "name": "Wanas_Apps",
+  "accounts_url": "https://accounts.zoho.com",
+  "domain_url": "https://www.zohoapis.com",
+  "api_version": "6"
+}

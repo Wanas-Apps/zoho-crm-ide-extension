@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Zoho Output",
+  "scopeName": "source.zoho-output",
+  "patterns": [
+    { "match": "^✓ .*$", "name": "markup.inserted.zoho-output" },
+    { "match": "^✗ .*$", "name": "markup.deleted.zoho-output" },
+    { "match": "^─+\\s*$", "name": "comment.line.zoho-output" },
+    {
+      "comment": "Error detail line: [TYPE] L<n> in <fn>: <message>",
+      "match": "^(\\s*)(\\[[A-Z][A-Z_]*\\])(\\s+L\\d+)?(\\s+in\\s+[^:]+:)?(.*)$",
+      "captures": {
+        "2": { "name": "invalid.illegal.zoho-output" },
+        "3": { "name": "constant.numeric.zoho-output" },
+        "4": { "name": "entity.name.function.zoho-output" },
+        "5": { "name": "string.zoho-output" }
+      }
+    },
+    { "match": "^(?:Errors|Logs|Network / integration calls)(?: \\(\\d+\\))?:", "name": "keyword.control.zoho-output" },
+    { "match": "^Return:", "name": "keyword.control.zoho-output" },
+    { "match": "^Saved\\b", "name": "keyword.control.zoho-output" },
+    { "comment": "Log timestamp prefix", "match": "^\\[\\d{4}-\\d{2}-\\d{2}T[^\\]]*\\]", "name": "comment.zoho-output" },
+    { "match": "\\[ERROR\\]", "name": "invalid.illegal.zoho-output" },
+    { "match": "\\[WARN\\]", "name": "markup.changed.zoho-output" },
+    { "comment": "Metric counts", "match": "\\b\\d+(?=\\s+(?:statements|integration|mail|sms)\\b)", "name": "constant.numeric.zoho-output" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "deployment": {
+    "name": "zoho_oauth_proxy",
+    "stack": "node18"
+  },
+  "execution": {
+    "type": "advancedio"
+  }
+}
