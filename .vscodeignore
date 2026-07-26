@@ -24,9 +24,14 @@ crm/**
 .zcrmignore
 zcrm-project.json
 meta.json
+# Project org pointer — written by sign-in into whatever workspace is open;
+# non-secret, but a dev-folder pointer must never ship in the VSIX.
+.zoho-crm-ide.json
 # Vector logo sources — the README/marketplace use images/WanasApps-logo.png
 # (vsce forbids SVG in README); the activity-bar icon SVG still ships.
 WanasApps-logo.svg
 images/WanasApps-logo.svg
 # Backend OAuth proxy — a separate Catalyst AppSail service, not part of the extension.
 oauth-proxy/**
+# Local secrets — must never be shipped in the VSIX.
+.env

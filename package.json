@@ -2,7 +2,7 @@
   "name": "zoho-crm-ide-extension",
   "displayName": "Zoho CRM IDE Extension",
   "description": "Turn VS Code into a Zoho CRM IDE: Deluge language IntelliSense, in-editor Zoho login, org metadata sync, and Run/Pull/Push for standalone functions.",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "publisher": "wanas-apps",
   "author": {
     "name": "Wanas Apps",
@@ -338,6 +338,24 @@
         "title": "Manage Workflows & Automation",
         "category": "Zoho CRM IDE",
         "icon": "$(circuit-board)"
+      },
+      {
+        "command": "zohoDeluge.sendMail",
+        "title": "Send Email from Record",
+        "category": "Zoho CRM IDE",
+        "icon": "$(mail)"
+      },
+      {
+        "command": "zohoDeluge.manageBlueprint",
+        "title": "Blueprint — State & Transitions",
+        "category": "Zoho CRM IDE",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "zohoDeluge.executeComposite",
+        "title": "Execute Composite Request (up to 5 calls)",
+        "category": "Zoho CRM IDE",
+        "icon": "$(layers)"
       }
     ],
     "menus": {
@@ -669,15 +687,14 @@
     "compile": "tsc -p ./",
     "bundle": "node esbuild.js",
     "bundle:meta": "node esbuild.js --metafile",
-    "package": "vsce package --no-rewrite-relative-links",
+    "package": "vsce package --no-rewrite-relative-links --no-dependencies",
     "watch": "node esbuild.js --watch",
     "typecheck": "tsc -p ./ --noEmit",
     "test": "npm run compile && node test/run-tests.js && node test/zoho-foundation.test.js && node test/zoho-login.test.js && node test/zoho-proxy.test.js && node test/zoho-sync.test.js && node test/zoho-index.test.js && node test/zoho-conflict.test.js && node test/zoho-functionops.test.js && node test/zoho-customization.test.js && node test/zoho-hardening.test.js && node test/zoho-mcp.test.js && node test/zoho-mcp-e2e.probe.js && node esbuild.js && node test/zoho-mcp-stdio.probe.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@wanasapps/zcrm-core": "^0.1.0",
-    "wanas-zcrm-extractor": "^2.1.0",
+    "wanas-zcrm-extractor": "^2.4.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
