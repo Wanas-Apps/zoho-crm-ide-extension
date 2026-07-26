@@ -694,7 +694,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "wanas-zcrm-extractor": "^2.5.0",
+    "wanas-zcrm-extractor": "github:Wanas-Apps/wanas-zcrm-extractor#main",
     "zod": "^4.4.3"
   },
   "devDependencies": {

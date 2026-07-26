@@ -19216,7 +19216,7 @@ var require_authService = __commonJS({
        * @returns {boolean} Whether user is authenticated.
        */
       isAuthenticated() {
-        return !!(this.tokens && this.tokens.access_token);
+        return !!(this.tokens && (this.tokens.access_token || this.tokens.refresh_token));
       }
       /**
        * Check if the access token has expired or is about to expire (1 minute buffer).
@@ -19852,7 +19852,7 @@ var require_package = __commonJS({
   "node_modules/wanas-zcrm-extractor/package.json"(exports2, module2) {
     module2.exports = {
       name: "wanas-zcrm-extractor",
-      version: "2.4.0",
+      version: "2.5.0",
       description: "Local Zoho CRM V8/V9 Metadata Extractor & 100% REST API Execution CLI Utility",
       main: "server.js",
       bin: {
@@ -19895,10 +19895,10 @@ var require_package = __commonJS({
       homepage: "https://www.wanasapps.com",
       repository: {
         type: "git",
-        url: "git+https://github.com/Wanas-Apps/Module-fields-metadata-extractor.git"
+        url: "git+https://github.com/Wanas-Apps/wanas-zcrm-extractor.git"
       },
       bugs: {
-        url: "https://github.com/Wanas-Apps/Module-fields-metadata-extractor/issues",
+        url: "https://github.com/Wanas-Apps/wanas-zcrm-extractor/issues",
         email: "support@wanasapps.com"
       },
       engines: {
@@ -20855,9 +20855,22 @@ var require_functionService = __commonJS({
     }
     async function executeTest({ resolved, args = {}, outputDir = "./metadata" }) {
       assertStandalone(resolved);
+      let runnerApiName = resolved.apiName;
+      const isCategoryStandalone = resolved.category ? /^standalone$/i.test(resolved.category) : resolved.namespace === "standalone";
+      if (!isCategoryStandalone) {
+        try {
+          const allFns = await listFunctions();
+          const standaloneFn = allFns.find((f) => /^standalone$/i.test(f.category || "") || (f.nameSpace || "").toLowerCase() === "standalone");
+          if (standaloneFn) {
+            runnerApiName = standaloneFn.api_name;
+            logInfo(`Target "${resolved.apiName}" (category: "${resolved.category || resolved.namespace}") testing via standalone runner "${runnerApiName}".`, "functionService.executeTest");
+          }
+        } catch (e) {
+        }
+      }
       const body = { functions: [{ script: resolved.script, arguments: args || {} }] };
-      const endpoint = `/crm/v7/settings/functions/${encodeURIComponent(resolved.apiName)}/actions/test`;
-      logInfo(`Executing test for standalone function "${resolved.apiName}" (${resolved.mode} mode).`, "functionService.executeTest");
+      const endpoint = `/crm/v7/settings/functions/${encodeURIComponent(runnerApiName)}/actions/test`;
+      logInfo(`Executing test for function "${resolved.apiName}" (${resolved.mode} mode) via endpoint "${endpoint}".`, "functionService.executeTest");
       let response;
       try {
         response = await (apiClient3.postNoRetry || apiClient3.post)(endpoint, body);
@@ -20865,7 +20878,7 @@ var require_functionService = __commonJS({
         const data = err.response && err.response.data;
         if (data && data.code === "INVALID_DATA") {
           throw fnError2(
-            `No standalone function named "${resolved.apiName}" exists in this org. The test endpoint can only run under an existing standalone function name (authoring new functions from the CLI is not yet supported).`,
+            `No function named "${runnerApiName}" exists in this org to execute the test. Ensure your function exists on Zoho CRM.`,
             "NAME_INVALID"
           );
         }
@@ -20874,7 +20887,14 @@ var require_functionService = __commonJS({
       }
       const fnResult = response && response.functions && response.functions[0] || {};
       const savedPath = await saveArtifact(outputDir, resolved, args, response);
-      return { resolved, args: args || {}, response, fnResult, savedPath, success: fnResult.status === "success" };
+      return {
+        resolved,
+        args: args || {},
+        response,
+        fnResult,
+        savedPath,
+        success: fnResult.status === "success"
+      };
     }
     async function runTest({ target, args = {}, outputDir = "./metadata" }) {
       const resolved = await resolveTarget(target);
