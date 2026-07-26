@@ -11,8 +11,9 @@ export function renderTestResult(result: RunResult): string {
     const bar = '─'.repeat(60);
     const lines: string[] = [];
 
+    const ns = resolved.namespace || 'standalone';
     lines.push('');
-    lines.push(`${success ? '✓ SUCCESS' : '✗ FAILED'}  🧪 standalone.${resolved.apiName}`);
+    lines.push(`${success ? '✓ SUCCESS' : '✗ FAILED'}  🧪 ${ns}.${resolved.apiName}`);
     lines.push(bar);
 
     // Compile / runtime errors (Zoho reports these under response.functions[].error).
@@ -102,15 +103,17 @@ function fmtError(e: any): string {
 }
 
 /** Plain-text block for a successful Pull (colorized by the output grammar). */
-export function renderPullResult(p: { apiName: string; filePath: string }): string {
+export function renderPullResult(p: { apiName: string; filePath: string; namespace?: string }): string {
     const bar = '─'.repeat(60);
-    return ['', `✓ Pulled  📥 standalone.${p.apiName}`, bar, `Saved → ${p.filePath}`].join('\n');
+    const ns = p.namespace || 'function';
+    return ['', `✓ Pulled  📥 ${ns}.${p.apiName}`, bar, `Saved → ${p.filePath}`].join('\n');
 }
 
 /** Plain-text block for a successful Push (colorized by the output grammar). */
-export function renderPushResult(p: { apiName: string; filePath: string }): string {
+export function renderPushResult(p: { apiName: string; filePath: string; namespace?: string }): string {
     const bar = '─'.repeat(60);
-    return ['', `✓ Pushed  📤 standalone.${p.apiName}`, bar, `From → ${p.filePath}`, 'Live org updated.'].join('\n');
+    const ns = p.namespace || 'function';
+    return ['', `✓ Pushed  📤 ${ns}.${p.apiName}`, bar, `From → ${p.filePath}`, 'Live org updated.'].join('\n');
 }
 
 function fmt(value: unknown): string {

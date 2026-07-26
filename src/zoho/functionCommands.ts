@@ -6,6 +6,7 @@ import {
     FnArg,
     buildArgMap,
     deriveApiNameFromPath,
+    deriveNamespaceFromPath,
     isStandalonePath,
     needsPushBeforeRun,
     hintFor
@@ -164,18 +165,19 @@ async function pullFunction(arg: FunctionCommandArg, deps: FunctionCommandDeps):
                 return;
             }
         }
+        const ns = deriveNamespaceFromPath(target.fsPath) || 'function';
         const res = await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: `Pulling standalone.${apiName}…`, cancellable: false },
+            { location: vscode.ProgressLocation.Notification, title: `Pulling ${ns}.${apiName}…`, cancellable: false },
             () => deps.ops.pull(apiName)
         );
         if (deps.conflictGuard) {
             await deps.conflictGuard.recordPulled(res.filePath);
         }
-        deps.output.appendLine(renderPullResult({ apiName: res.apiName ?? apiName, filePath: res.filePath }));
+        deps.output.appendLine(renderPullResult({ apiName: res.apiName ?? apiName, filePath: res.filePath, namespace: res.namespace || ns }));
         deps.output.show(true);
         const doc = await vscode.workspace.openTextDocument(res.filePath);
         await vscode.window.showTextDocument(doc, { preview: false });
-        void vscode.window.showInformationMessage(`Pulled standalone.${apiName} from Zoho.`);
+        void vscode.window.showInformationMessage(`Pulled ${res.namespace || ns}.${apiName} from Zoho.`);
     } catch (e) {
         reportFnError(e, deps.output);
     }
@@ -186,6 +188,7 @@ async function pushFunction(arg: FunctionCommandArg, deps: FunctionCommandDeps):
     if (!target) {
         return;
     }
+    const ns = deriveNamespaceFromPath(target.fsPath) || 'function';
     try {
         const doc = findOpenDoc(target.fsPath);
         if (doc?.isDirty) {
@@ -218,9 +221,9 @@ async function pushFunction(arg: FunctionCommandArg, deps: FunctionCommandDeps):
         if (deps.conflictGuard) {
             await deps.conflictGuard.recordPulled(target.fsPath);
         }
-        deps.output.appendLine(renderPushResult({ apiName: res.apiName, filePath: target.fsPath }));
+        deps.output.appendLine(renderPushResult({ apiName: res.apiName, filePath: target.fsPath, namespace: res.category ? res.category.toLowerCase() : ns }));
         deps.output.show(true);
-        void vscode.window.showInformationMessage(`Pushed standalone.${res.apiName} to Zoho.`);
+        void vscode.window.showInformationMessage(`Pushed ${res.category ? res.category.toLowerCase() : ns}.${res.apiName} to Zoho.`);
     } catch (e) {
         if ((e as { code?: string })?.code === 'FN_NOT_FOUND') {
             await offerCreate(target, deps);
