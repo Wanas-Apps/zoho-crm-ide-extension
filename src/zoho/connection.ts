@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import authService = require('@wanasapps/zcrm-core/src/services/authService');
+import authService = require('wanas-zcrm-extractor/src/services/authService');
 import { WorkspaceConfigStore } from './configStore';
 import { SecretStorageStore } from './secretStore';
 import { OutputChannelLog } from './log';

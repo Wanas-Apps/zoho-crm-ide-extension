@@ -18,6 +18,27 @@ in-editor Zoho sign-in, org metadata sync, Run/Pull/Push for functions, and an e
 
 ---
 
+## What's new
+
+### 1.5.0 — unified with the `zcrm` CLI
+- **One code source** — the extension now bundles its metadata/function services directly from the [`wanas-zcrm-extractor`](https://www.npmjs.com/package/wanas-zcrm-extractor) CLI package (the former `@wanasapps/zcrm-core` snapshot fork is retired). Pull output, function file naming, and push/pull semantics are the CLI's own code, byte for byte — the two tools can never drift apart again.
+- **One metadata tree** — running `zcrm pull` (v2.3+) inside a workspace this extension manages detects the existing extraction root and refreshes it in place instead of creating a second `./metadata` folder. All function categories are now testable from the CLI-shared core, matching the CLI.
+- **Cross-process sync lock** — pulls from the CLI and the extension into the same folder now coordinate through `.zcrm/.store/.sync-in-progress`; a concurrent second pull aborts cleanly instead of racing the stale-file sweep.
+- **Layouts in the tree view** — the CLI-shared core now writes `.zcrm/.store/layouts.json`, so the Layouts nodes populate after the next pull.
+
+### 1.2.0 — project-bound orgs (zero-config)
+- **Project org pointer** — signing in (or exporting a session) writes a small, **non-secret** `.zoho-crm-ide.json` into the workspace (`{ org_id, dc, org_name }`). Commit it: the project itself now declares which Zoho org it belongs to.
+- **The stdio MCP server resolves the org from the project** — no more manual pinning. Resolution order: explicit `ZOHO_MCP_EXPECTED_ORG` env → the client's MCP roots → a walk-up from the server's working directory (start it elsewhere with `ZOHO_MCP_PROJECT`). The matching per-org session file is picked automatically too, so one generic config entry can serve every project.
+
+### 1.1.0 — multi-org safety
+
+- **Per-org sessions** — "Enable External MCP Access" now writes one session file per org (`~/.zoho-crm-ide/sessions/<dc>-<orgId>.json`), so exporting from a second org no longer overwrites the first. The legacy `~/.zoho-crm-ide/session.json` is still written so existing configs keep working.
+- **Org-pinned agent configs** — "Copy Antigravity Config" pins the copied entry to the org you're signed in to (`ZOHO_MCP_EXPECTED_ORG`).
+- **Wrong-org guard** — a pinned stdio server refuses to start on a session file claiming a different org, and verifies the **live** org against the pin before the first tool call. An agent can never silently read or write the wrong org.
+- The session export now confirms your org identity with Zoho before writing the file.
+
+---
+
 ## Features
 
 ### 🧠 Deluge language support
@@ -69,12 +90,24 @@ The server ships in **two transports**:
 
 > **One-time setup (for the stdio transport — Cursor, Windsurf, Antigravity, Claude Desktop):**
 > 1. Sign in to Zoho CRM in VS Code (**proxy mode is required** for external access).
-> 2. Run **“Zoho CRM IDE: Enable External MCP Access (Export Session)”** — writes your session (refresh token + proxy coordinates, **never a client secret**) to `~/.zoho-crm-ide/session.json` (owner-only).
-> 3. Run **“Zoho CRM IDE: Copy Antigravity (stdio) MCP Config”** to copy a ready-to-paste block with the real absolute paths filled in.
+> 2. Run **“Zoho CRM IDE: Enable External MCP Access (Export Session)”** — writes your session (refresh token + proxy coordinates, **never a client secret**) to `~/.zoho-crm-ide/sessions/<dc>-<orgId>.json` (owner-only, one file per org).
+> 3. Run **“Zoho CRM IDE: Copy Antigravity (stdio) MCP Config”** to copy a ready-to-paste block with the real absolute paths filled in — **pinned to the org you're signed in to** via `ZOHO_MCP_EXPECTED_ORG`.
 >
 > Writes are enabled by default and gated by **your IDE's own per-tool approval**. Add `"ZOHO_MCP_READONLY": "1"` to the `env` block for a read-only session. Requires `node` on your `PATH`.
 
-In the snippets below, replace `<extension>` with the extension's install folder (the copied config fills this in automatically — typically `~/.vscode/extensions/wanas-apps.zoho-crm-ide-extension-<version>`).
+**Wrong-org protection:** every project carries a non-secret `.zoho-crm-ide.json` org pointer (written at sign-in), sessions are stored per org, and the server binds itself to one org — from the `ZOHO_MCP_EXPECTED_ORG` pin, the client's MCP roots, or its working directory's project pointer. It refuses to start on a session file claiming a different org and verifies the **live** org before the first tool call — so working with multiple Zoho orgs never silently points an agent at the wrong one.
+
+**The simplest config** — when your IDE exposes MCP roots or launches stdio servers in the project directory (per-project configs like `.vscode/mcp.json` / `.cursor/mcp.json` do), a single generic entry serves **all** your projects; the server reads the org from each project's pointer and picks the right per-org session:
+```json
+{
+  "mcpServers": {
+    "zoho-crm-ide": { "command": "node", "args": ["<extension>/dist/mcp-stdio.js"] }
+  }
+}
+```
+For global configs where the server starts outside any project (so neither roots nor cwd identify one), use the **explicitly pinned** form below — "Copy Antigravity Config" generates it with everything filled in. One pinned entry per org (e.g. `zoho-crm-prod`, `zoho-crm-sandbox`).
+
+In the snippets below, replace `<extension>` with the extension's install folder and `<dc>-<orgId>` with your data center + org id — **or skip the hand-editing entirely: the copied config fills everything in automatically.** The extension folder is typically `~/.vscode/extensions/wanas-apps.zoho-crm-ide-extension-<version>` (VS Code) or `~/.antigravity-ide/extensions/wanas-apps.zoho-crm-ide-extension-<version>-universal` (Antigravity).
 
 ### VS Code (1.101+) — nothing to configure
 VS Code discovers the server automatically through the extension's MCP provider. Just open **agent mode** and the `zoho-crm-ide` tools appear. To add it manually instead, create `.vscode/mcp.json`:
@@ -85,7 +118,10 @@ VS Code discovers the server automatically through the extension's MCP provider.
       "type": "stdio",
       "command": "node",
       "args": ["<extension>/dist/mcp-stdio.js"],
-      "env": { "ZOHO_MCP_SESSION": "~/.zoho-crm-ide/session.json" }
+      "env": {
+        "ZOHO_MCP_SESSION": "~/.zoho-crm-ide/sessions/<dc>-<orgId>.json",
+        "ZOHO_MCP_EXPECTED_ORG": "<orgId>"
+      }
     }
   }
 }
@@ -100,7 +136,10 @@ Edit `~/.cursor/mcp.json` (global) or `<project>/.cursor/mcp.json`, or use **Set
     "zoho-crm-ide": {
       "command": "node",
       "args": ["<extension>/dist/mcp-stdio.js"],
-      "env": { "ZOHO_MCP_SESSION": "~/.zoho-crm-ide/session.json" }
+      "env": {
+        "ZOHO_MCP_SESSION": "~/.zoho-crm-ide/sessions/<dc>-<orgId>.json",
+        "ZOHO_MCP_EXPECTED_ORG": "<orgId>"
+      }
     }
   }
 }
@@ -119,7 +158,7 @@ Add the same `mcpServers` stdio block to the client's MCP config (Claude Desktop
 
 ## Getting started
 
-1. Install the extension and open the folder you want bound to your org.
+1. Install the extension (published on [Open VSX](https://open-vsx.org/extension/wanas-apps/zoho-crm-ide-extension) — the marketplace used by Antigravity, Cursor, and Windsurf) and open the folder you want bound to your org.
 2. Run **“Zoho CRM IDE: Sign in to Zoho CRM”** (or use the status-bar item / Accounts menu).
 3. Metadata pulls automatically after sign-in (toggle with `zohoDeluge.autoPullOnSignIn`).
 4. Open a `.ds` function and use the editor-title **Run / Pull / Push** actions, or browse the **Zoho CRM IDE** activity-bar views.

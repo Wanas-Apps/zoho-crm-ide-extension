@@ -25,7 +25,9 @@ import { fnService } from '../functionServiceBridge';
 import { OrgApi, OrgHttp, OrgAuth, FetchLike } from './orgApi';
 import { FunctionPort, ToolCtx } from './mcpTools';
 import { startMcpServer, McpServerHandle } from './mcpServer';
-import { buildSessionFile, writeSessionFile, defaultSessionPath } from './sessionFile';
+import { buildSessionFile, writeSessionFile, defaultSessionPath, orgSessionPath } from './sessionFile';
+import { writeProjectOrgFile, PROJECT_ORG_FILE } from './projectOrg';
+import { fetchWhoAmI, WhoAmI } from '../whoami';
 
 const PROVIDER_ID = 'zohoDeluge.mcpProvider';
 const SERVER_LABEL = 'Zoho CRM IDE';
@@ -166,9 +168,27 @@ async function exportSession(connection: ZohoConnection, output: vscode.OutputCh
         return;
     }
 
+    // Bind the export to the signed-in org: the claim is what the stdio
+    // server's wrong-org guard enforces, so an unlabeled export is refused.
+    const dc = connection.config.getDc() || 'com';
+    let who: WhoAmI;
+    try {
+        who = await fetchWhoAmI(dc);
+    } catch (e) {
+        void vscode.window.showErrorMessage(
+            `Could not confirm the signed-in org (${e instanceof Error ? e.message : String(e)}) — try the export again.`
+        );
+        return;
+    }
+    if (!who.orgId) {
+        void vscode.window.showErrorMessage('Zoho did not report an org id for this session — sign in again, then export.');
+        return;
+    }
+
     const session = buildSessionFile({
-        dc: connection.config.getDc() || 'com',
+        dc,
         proxy: { url: connection.proxy.url, token: connection.proxy.token },
+        org: { id: who.orgId, name: who.org },
         tokens: {
             refresh_token: tokens.refresh_token,
             access_token: tokens.access_token,
@@ -178,16 +198,32 @@ async function exportSession(connection: ZohoConnection, output: vscode.OutputCh
         now: new Date().toISOString()
     });
 
-    const filePath = defaultSessionPath();
+    // Org-keyed file is the real session store (one per org — exports never
+    // clobber another org); the legacy single file keeps old configs working.
+    const filePath = orgSessionPath(dc, who.orgId);
+    const legacyPath = defaultSessionPath();
     try {
         await writeSessionFile(filePath, session);
+        await writeSessionFile(legacyPath, session);
     } catch (e) {
         void vscode.window.showErrorMessage(`Could not write session file: ${e instanceof Error ? e.message : String(e)}`);
         return;
     }
-    output.appendLine(`[MCP] session exported to ${filePath} (proxy mode)`);
+    output.appendLine(`[MCP] session exported to ${filePath} (org ${who.orgId} "${who.org}", proxy mode)`);
+    output.appendLine(`[MCP] legacy session.json also updated (unpinned) — prefer the per-org config from "Copy Antigravity Config".`);
+
+    // Refresh the project's org pointer so the stdio server can resolve this
+    // org straight from the workspace (no manual pinning).
+    if (connection.outputDir) {
+        try {
+            await writeProjectOrgFile(connection.outputDir, { orgId: who.orgId, dc, name: who.org });
+            output.appendLine(`[MCP] ${PROJECT_ORG_FILE} → org ${who.orgId} ("${who.org}")`);
+        } catch (e) {
+            output.appendLine(`[WARN] could not write ${PROJECT_ORG_FILE}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+    }
     const pick = await vscode.window.showInformationMessage(
-        `External MCP access enabled — session written to ${filePath}.`,
+        `External MCP access enabled for ${who.org} — session written to ${filePath}.`,
         'Copy Antigravity Config'
     );
     if (pick === 'Copy Antigravity Config') {
@@ -195,21 +231,42 @@ async function exportSession(connection: ZohoConnection, output: vscode.OutputCh
     }
 }
 
-/** Copy a ready-to-paste stdio MCP config for an external agent (Antigravity). */
+/** Copy a ready-to-paste stdio MCP config for an external agent (Antigravity).
+ *  Signed in → an org-pinned entry (per-org session path + ZOHO_MCP_EXPECTED_ORG)
+ *  so the server refuses to serve any other org; otherwise the legacy unpinned
+ *  entry plus a reminder to export first. */
 async function copyStdioConfig(
     context: vscode.ExtensionContext,
     connection: ZohoConnection,
     output: vscode.OutputChannel
 ): Promise<void> {
     const stdioEntry = path.join(context.extensionPath, 'dist', 'mcp-stdio.js');
-    const sessionPath = defaultSessionPath();
+    const exported = !!connection.proxy && connection.isAuthenticated();
+
+    let env: Record<string, string> = { ZOHO_MCP_SESSION: defaultSessionPath() };
+    let pinnedTo: WhoAmI | undefined;
+    if (exported) {
+        try {
+            const who = await fetchWhoAmI(connection.config.getDc() || 'com');
+            if (who.orgId) {
+                pinnedTo = who;
+                env = {
+                    ZOHO_MCP_SESSION: orgSessionPath(who.dc, who.orgId),
+                    ZOHO_MCP_EXPECTED_ORG: who.orgId
+                };
+            }
+        } catch (e) {
+            output.appendLine(`[MCP] could not pin config to an org (${e instanceof Error ? e.message : String(e)}) — copying the unpinned legacy entry.`);
+        }
+    }
+
     const config = JSON.stringify(
         {
             mcpServers: {
                 'zoho-crm-ide': {
                     command: 'node',
                     args: [stdioEntry],
-                    env: { ZOHO_MCP_SESSION: sessionPath }
+                    env
                 }
             }
         },
@@ -217,12 +274,13 @@ async function copyStdioConfig(
         2
     );
     await vscode.env.clipboard.writeText(config);
-    const exported = !!connection.proxy && connection.isAuthenticated();
-    output.appendLine('[MCP] Antigravity (stdio) config copied to clipboard.');
+    output.appendLine(`[MCP] Antigravity (stdio) config copied to clipboard${pinnedTo ? ` (pinned to org ${pinnedTo.orgId} "${pinnedTo.org}")` : ' (unpinned)'}.`);
     void vscode.window.showInformationMessage(
-        exported
-            ? 'Antigravity MCP config copied. Paste it into Antigravity\'s MCP settings.'
-            : 'Antigravity MCP config copied. Run "Enable External MCP Access" first so the server can sign in.'
+        pinnedTo
+            ? `Antigravity MCP config copied (pinned to ${pinnedTo.org}). Paste it into Antigravity's MCP settings.`
+            : exported
+              ? 'Antigravity MCP config copied (unpinned — could not confirm the org). Paste it into Antigravity\'s MCP settings.'
+              : 'Antigravity MCP config copied. Run "Enable External MCP Access" first so the server can sign in.'
     );
 }
 

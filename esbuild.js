@@ -1,6 +1,6 @@
 /*
  * esbuild bundler for the extension. Bundles src/extension.ts and the reused
- * Zoho CRM core service modules (imported from the `@wanasapps/zcrm-core` package)
+ * Zoho CRM CLI service modules (deep-imported from `wanas-zcrm-extractor`)
  * into a single self-contained dist/extension.js, keeping `vscode` external.
  *
  *   node esbuild.js                build once (dev, sourcemaps)

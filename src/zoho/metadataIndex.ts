@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseSignature } from '@wanasapps/zcrm-core/src/utils/delugeSignature';
+import { parseSignature } from 'wanas-zcrm-extractor/src/utils/delugeSignature';
 import { DelugeSymbol } from '../data/delugeData';
 import { DynamicSymbolSource } from '../data/dynamicSource';
 import { FieldMetaReader, renderFieldHover } from './fieldMeta';
@@ -40,6 +40,7 @@ export class MetadataIndex implements DynamicSymbolSource {
     private modules: DelugeSymbol[] = [];
     private moduleSet = new Set<string>();
     private fieldMap: Record<string, Record<string, string>> = {};
+    private layoutsByModule: Record<string, Array<{ id: string; name: string; status?: string }>> = {};
     private fieldSymbolCache = new Map<string, DelugeSymbol[]>();
     private hover = new Map<string, DelugeSymbol>();
     private fieldMetaReader?: FieldMetaReader;
@@ -62,6 +63,7 @@ export class MetadataIndex implements DynamicSymbolSource {
         this.modules = [];
         this.moduleSet.clear();
         this.fieldMap = {};
+        this.layoutsByModule = {};
         this.fieldSymbolCache.clear();
         this.hover.clear();
         this.fieldMetaReader = undefined;
@@ -83,9 +85,33 @@ export class MetadataIndex implements DynamicSymbolSource {
         await this.loadStandalone(folderPath, storeDir);
         await this.loadModules(storeDir);
         await this.loadFieldMap(storeDir);
+        await this.loadLayouts(storeDir);
         await this.loadFunctionGroups(folderPath, storeDir);
 
         this.loaded = true;
+    }
+
+    getLayouts(moduleName: string): Array<{ id: string; name: string; status?: string }> {
+        return this.layoutsByModule[moduleName] || [];
+    }
+
+    private async loadLayouts(storeDir: string): Promise<void> {
+        const data = await readJsonSafe(path.join(storeDir, 'layouts.json'));
+        if (!data) return;
+        const list = Array.isArray(data.layouts) ? data.layouts : (Array.isArray(data) ? data : []);
+        for (const item of list) {
+            if (!item || !item.module?.api_name) continue;
+            const mod = String(item.module.api_name);
+            const entry = {
+                id: String(item.id || ''),
+                name: String(item.name || item.label || 'Default Layout'),
+                status: item.status !== undefined ? String(item.status) : undefined
+            };
+            if (!this.layoutsByModule[mod]) {
+                this.layoutsByModule[mod] = [];
+            }
+            this.layoutsByModule[mod].push(entry);
+        }
     }
 
     private async loadStandalone(folderPath: string, storeDir: string): Promise<void> {

@@ -4,10 +4,11 @@
  *
  * The CLI is plain JavaScript with no shipped types. These declarations cover
  * ONLY the surface the extension consumes through the dependency-injection
- * seams added in M1. This is the interim bridge contract; at M6 it is replaced
- * by the typed `@wanas/zcrm-core` package.
+ * seams added in M1. All modules resolve to the single `wanas-zcrm-extractor`
+ * package (the CLI itself) — the former `@wanasapps/zcrm-core` snapshot fork
+ * was retired so both tools share one source of truth.
  */
-declare module '@wanasapps/zcrm-core/src/services/authService' {
+declare module 'wanas-zcrm-extractor/src/services/authService' {
   /** Shape of the token bundle the AuthService loads/saves/holds. */
   interface ZcrmTokens {
     access_token?: string;
@@ -66,7 +67,7 @@ declare module '@wanasapps/zcrm-core/src/services/authService' {
   export = authService;
 }
 
-declare module '@wanasapps/zcrm-core/src/services/metadata/crmMetadataService' {
+declare module 'wanas-zcrm-extractor/src/services/metadata/crmMetadataService' {
   interface ExtractOptions {
     concurrency?: number;
     /** Per-module record counts cost ~50 credits each — opt-in only. */
@@ -92,11 +93,11 @@ declare module '@wanasapps/zcrm-core/src/services/metadata/crmMetadataService' {
   export = service;
 }
 
-declare module '@wanasapps/zcrm-core/src/utils/delugeFormatter' {
+declare module 'wanas-zcrm-extractor/src/utils/delugeFormatter' {
   export function formatDeluge(code: string): string;
 }
 
-declare module '@wanasapps/zcrm-core/src/services/functionService' {
+declare module 'wanas-zcrm-extractor/src/services/functionService' {
   interface FnArg { type: string; name: string; }
   interface ResolvedTarget {
     mode: string;
@@ -129,7 +130,7 @@ declare module '@wanasapps/zcrm-core/src/services/functionService' {
   export function assertStandalone(resolved: any): void;
 }
 
-declare module '@wanasapps/zcrm-core/src/utils/delugeSignature' {
+declare module 'wanas-zcrm-extractor/src/utils/delugeSignature' {
   interface ParsedSignature {
     namespace: string | null;
     apiName: string | null;
@@ -139,13 +140,19 @@ declare module '@wanasapps/zcrm-core/src/utils/delugeSignature' {
   export function parseSignature(src: string): ParsedSignature;
 }
 
-declare module '@wanasapps/zcrm-core/src/utils/apiClient' {
+declare module 'wanas-zcrm-extractor/src/utils/apiClient' {
   /** GET with automatic token refresh + rate-limit retries. */
   export function get(endpoint: string, params?: Record<string, unknown>): Promise<any>;
   /** POST (JSON). Inherits the retry/refresh behaviour of the read path. */
   export function post(endpoint: string, data?: unknown, params?: Record<string, unknown>): Promise<any>;
   /** POST (JSON) with NO automatic retry — for executing/mutating paths. */
   export function postNoRetry(endpoint: string, data?: unknown, params?: Record<string, unknown>): Promise<any>;
+  /** PUT (JSON). Does NOT retry. */
+  export function put(endpoint: string, data?: unknown, params?: Record<string, unknown>): Promise<any>;
+  /** PATCH (JSON). Does NOT retry. */
+  export function patch(endpoint: string, data?: unknown, params?: Record<string, unknown>): Promise<any>;
+  /** DELETE. Does NOT retry. */
+  export function del(endpoint: string, params?: Record<string, unknown>): Promise<any>;
   /** Multipart PUT (function code push). Does NOT retry. */
   export function putForm(
     endpoint: string,
@@ -154,3 +161,26 @@ declare module '@wanasapps/zcrm-core/src/utils/apiClient' {
   /** Set the global concurrency cap for in-flight requests. */
   export function setConcurrency(n: number): void;
 }
+
+declare module 'wanas-zcrm-extractor/src/services/customizationService' {
+  interface CustomizationService {
+    createModule(singularLabel: string, pluralLabel: string, options?: Record<string, unknown>): Promise<any>;
+    updateModule(moduleNameOrId: string, data: Record<string, unknown>): Promise<any>;
+    createField(moduleName: string, data: Record<string, unknown>): Promise<any>;
+    updateField(moduleName: string, fieldId: string, data: Record<string, unknown>): Promise<any>;
+    deleteField(moduleName: string, fieldId: string): Promise<any>;
+    updateLayout(moduleName: string, layoutId: string, data: Record<string, unknown>): Promise<any>;
+    activateLayout(moduleName: string, layoutId: string): Promise<any>;
+    deactivateLayout(moduleName: string, layoutId: string, transferTo?: string): Promise<any>;
+    deleteLayout(moduleName: string, layoutId: string, transferTo?: string): Promise<any>;
+  }
+
+  const service: CustomizationService;
+  export = service;
+}
+
+declare module 'wanas-zcrm-extractor/src/services/auditLogService' {
+  export function exportAuditLog(filterPath?: string | null, outputDir?: string): Promise<string>;
+}
+
+

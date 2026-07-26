@@ -42,11 +42,15 @@ const STDIO_BIN = path.join(__dirname, '..', 'dist', 'mcp-stdio.js');
         'utf8'
     );
 
+    // Neutral cwd: the repo itself may carry a .zoho-crm-ide.json (sign-in
+    // writes one into the open workspace), which would org-bind this case.
+    const neutralCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zoho-mcp-cwd-'));
     const client = new Client({ name: 'stdio-probe', version: '0' });
     const transport = new StdioClientTransport({
         command: process.execPath, // the current node
         args: [STDIO_BIN, sessionPath],
         env: { ...process.env, ZOHO_MCP_SESSION: sessionPath },
+        cwd: neutralCwd,
         stderr: 'inherit'
     });
 
@@ -56,7 +60,7 @@ const STDIO_BIN = path.join(__dirname, '..', 'dist', 'mcp-stdio.js');
 
         const list = await client.listTools();
         const names = list.tools.map((t) => t.name);
-        ok('advertises all 13 tools over stdio', names.length === 13);
+        ok('advertises all 56 tools over stdio', names.length === 56);
         ok('includes a read tool (zoho_org_info)', names.includes('zoho_org_info'));
         ok('includes a write tool (zoho_push_function)', names.includes('zoho_push_function'));
 
@@ -66,6 +70,80 @@ const STDIO_BIN = path.join(__dirname, '..', 'dist', 'mcp-stdio.js');
         console.error('  ERROR:', e && (e.stack || e.message || e));
     } finally {
         fs.unlinkSync(sessionPath);
+        fs.rmSync(neutralCwd, { recursive: true, force: true });
+    }
+
+    // Wrong-org guard: a server entry pinned to org B must refuse a session
+    // file claiming org A at boot (before any tool is advertised).
+    {
+        const { spawn } = require('child_process');
+        const pinnedSession = path.join(os.tmpdir(), `zoho-mcp-stdio-pin-${Date.now()}.json`);
+        fs.writeFileSync(
+            pinnedSession,
+            JSON.stringify({
+                v: 1,
+                dc: 'com',
+                proxy: { url: 'https://proxy.invalid/exec', token: 'x' },
+                org: { id: '111', name: 'Org A' },
+                tokens: { refresh_token: 'DUMMY', api_domain: 'https://www.zohoapis.com' }
+            }),
+            'utf8'
+        );
+        try {
+            const result = await new Promise((resolve) => {
+                const child = spawn(process.execPath, [STDIO_BIN, pinnedSession], {
+                    env: { ...process.env, ZOHO_MCP_SESSION: pinnedSession, ZOHO_MCP_EXPECTED_ORG: '222' },
+                    stdio: ['ignore', 'ignore', 'pipe']
+                });
+                let stderr = '';
+                child.stderr.on('data', (d) => { stderr += d; });
+                const t = setTimeout(() => { child.kill(); resolve({ code: -1, stderr }); }, 15000);
+                child.on('exit', (code) => { clearTimeout(t); resolve({ code, stderr }); });
+            });
+            ok('pinned entry refuses a wrong-org session at boot (exit 1)', result.code === 1);
+            ok('refusal names both orgs on stderr', /111/.test(result.stderr) && /222/.test(result.stderr));
+        } finally {
+            fs.unlinkSync(pinnedSession);
+        }
+    }
+
+    // Project pointer: a .zoho-crm-ide.json in the working directory binds the
+    // org with NO env pin — a session claiming a different org must be refused.
+    {
+        const { spawn } = require('child_process');
+        const projDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zoho-mcp-proj-'));
+        fs.writeFileSync(
+            path.join(projDir, '.zoho-crm-ide.json'),
+            JSON.stringify({ v: 1, org_id: '111', dc: 'com', org_name: 'Org A' }),
+            'utf8'
+        );
+        const otherOrgSession = path.join(projDir, 'session-org-222.json');
+        fs.writeFileSync(
+            otherOrgSession,
+            JSON.stringify({
+                v: 1,
+                dc: 'com',
+                proxy: { url: 'https://proxy.invalid/exec', token: 'x' },
+                org: { id: '222', name: 'Org B' },
+                tokens: { refresh_token: 'DUMMY', api_domain: 'https://www.zohoapis.com' }
+            }),
+            'utf8'
+        );
+        try {
+            const env = { ...process.env, ZOHO_MCP_SESSION: otherOrgSession };
+            delete env.ZOHO_MCP_EXPECTED_ORG;
+            const result = await new Promise((resolve) => {
+                const child = spawn(process.execPath, [STDIO_BIN], { cwd: projDir, env, stdio: ['ignore', 'ignore', 'pipe'] });
+                let stderr = '';
+                child.stderr.on('data', (d) => { stderr += d; });
+                const t = setTimeout(() => { child.kill(); resolve({ code: -1, stderr }); }, 15000);
+                child.on('exit', (code) => { clearTimeout(t); resolve({ code, stderr }); });
+            });
+            ok('project pointer discovered from cwd', /project pointer: org 111/.test(result.stderr));
+            ok('pointer org vs session claim mismatch refused at boot (exit 1)', result.code === 1 && /111/.test(result.stderr) && /222/.test(result.stderr));
+        } finally {
+            fs.rmSync(projDir, { recursive: true, force: true });
+        }
     }
 
     console.log(`\nTotal: ${pass + fail}  PASS: ${pass}  FAIL: ${fail}`);

@@ -7,6 +7,7 @@ import { fetchProxyClientId, DEFAULT_CLIENT_ID } from './authProxy';
 import { createLoopbackServer, generateState } from './oauth';
 import { fetchWhoAmI, WhoAmI } from './whoami';
 import { classifyRefreshError } from './refreshError';
+import { writeProjectOrgFile, PROJECT_ORG_FILE } from './mcp/projectOrg';
 
 export const PROVIDER_ID = 'zoho';
 export const PROVIDER_LABEL = 'Zoho CRM';
@@ -201,6 +202,19 @@ export class ZohoAuthProvider implements vscode.AuthenticationProvider, vscode.D
             await this.sessionLock.set(session);
             await vscode.commands.executeCommand('setContext', 'zohoDeluge.loggedIn', true);
             this.statusBar.showLoggedIn(who.org);
+
+            // Bind the workspace to this org (non-secret pointer file) so the
+            // external stdio MCP server can resolve the org from the project.
+            if (connection.outputDir && who.orgId) {
+                try {
+                    await writeProjectOrgFile(connection.outputDir, { orgId: who.orgId, dc, name: who.org });
+                    connection.output.appendLine(`[AUTH] ${PROJECT_ORG_FILE} → org ${who.orgId} ("${who.org}")`);
+                } catch (e) {
+                    connection.output.appendLine(
+                        `[WARN] could not write ${PROJECT_ORG_FILE}: ${e instanceof Error ? e.message : String(e)}`
+                    );
+                }
+            }
 
             const accessToken = connection.auth.tokens?.access_token || '';
             const vsSession = this.toSession(session, accessToken);

@@ -146,8 +146,8 @@ function buildFunctionItem(entry: FunctionEntry): vscode.TreeItem {
     if (entry.name && entry.name !== entry.apiName) {
         item.description = entry.name;
     }
-    // Standalone → full Run/Pull/Push; others → Pull + open only.
-    item.contextValue = entry.category === 'Standalone' ? FUNCTION_CONTEXT : 'zohoFunctionOther';
+    // All function categories (standalone, automation, button, schedule, related_list, signals) support Run/Pull/Push/Diff.
+    item.contextValue = FUNCTION_CONTEXT;
     if (entry.dsPath) {
         item.resourceUri = vscode.Uri.file(entry.dsPath);
         item.command = { command: 'vscode.open', title: 'Open Function', arguments: [item.resourceUri] };
@@ -159,7 +159,7 @@ function buildFunctionItem(entry: FunctionEntry): vscode.TreeItem {
 }
 
 // ---------------------------------------------------------------------------
-// Modules & Fields view — modules expand to their fields.
+// Modules, Fields & Layouts view — modules expand to Fields and Layouts.
 // ---------------------------------------------------------------------------
 
 class ModuleItem extends vscode.TreeItem {
@@ -170,6 +170,32 @@ class ModuleItem extends vscode.TreeItem {
         if (detail) {
             this.tooltip = detail;
         }
+    }
+}
+
+class ModuleCategoryNode extends vscode.TreeItem {
+    constructor(public readonly moduleName: string, public readonly nodeType: 'fields' | 'layouts', count: number) {
+        super(nodeType === 'fields' ? `Fields (${count})` : `Layouts (${count})`, vscode.TreeItemCollapsibleState.Collapsed);
+        this.iconPath = new vscode.ThemeIcon(nodeType === 'fields' ? 'symbol-field' : 'layout');
+        this.contextValue = nodeType === 'fields' ? 'zohoFieldsCategory' : 'zohoLayoutsCategory';
+    }
+}
+
+class FieldItem extends vscode.TreeItem {
+    constructor(public readonly moduleName: string, public readonly fieldId: string, label: string, detail?: string) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+        this.iconPath = new vscode.ThemeIcon('symbol-field');
+        this.contextValue = 'zohoField';
+        this.description = detail;
+    }
+}
+
+class LayoutItem extends vscode.TreeItem {
+    constructor(public readonly moduleName: string, public readonly layoutId: string, label: string, status?: string) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+        this.iconPath = new vscode.ThemeIcon('layout');
+        this.contextValue = 'zohoLayout';
+        this.description = status ? `${status} (${layoutId})` : layoutId;
     }
 }
 
@@ -189,16 +215,27 @@ class ModulesTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
 
     getChildren(element?: vscode.TreeItem): vscode.TreeItem[] {
         if (element instanceof ModuleItem) {
-            return this.index.getFieldSymbols(element.moduleName).map((sym) => {
-                const item = new vscode.TreeItem(sym.label, vscode.TreeItemCollapsibleState.None);
-                item.iconPath = new vscode.ThemeIcon('symbol-field');
-                item.description = sym.detail;
-                item.contextValue = 'zohoField';
-                if (sym.documentation) {
-                    item.tooltip = new vscode.MarkdownString(sym.documentation);
-                }
-                return item;
-            });
+            const fieldsCount = this.index.getFieldSymbols(element.moduleName).length;
+            const layoutsCount = this.index.getLayouts(element.moduleName).length;
+            return [
+                new ModuleCategoryNode(element.moduleName, 'fields', fieldsCount),
+                new ModuleCategoryNode(element.moduleName, 'layouts', layoutsCount)
+            ];
+        }
+        if (element instanceof ModuleCategoryNode) {
+            if (element.nodeType === 'fields') {
+                return this.index.getFieldSymbols(element.moduleName).map((sym) => {
+                    const item = new FieldItem(element.moduleName, sym.label, sym.label, sym.detail);
+                    if (sym.documentation) {
+                        item.tooltip = new vscode.MarkdownString(sym.documentation);
+                    }
+                    return item;
+                });
+            } else {
+                return this.index.getLayouts(element.moduleName).map((lay) => {
+                    return new LayoutItem(element.moduleName, lay.id, lay.name, lay.status);
+                });
+            }
         }
         return this.index.getModuleCompletions().map((sym) => new ModuleItem(sym.label, sym.label, sym.detail));
     }

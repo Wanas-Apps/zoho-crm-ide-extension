@@ -1,4 +1,4 @@
-import functionService = require('@wanasapps/zcrm-core/src/services/functionService');
+import functionService = require('wanas-zcrm-extractor/src/services/functionService');
 import { FunctionServicePort } from './functionOps';
 
 /**

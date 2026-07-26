@@ -79,11 +79,15 @@ export function needsPushBeforeRun(resolved: { category: string | null }): boole
     return resolved.category === null || resolved.category === undefined;
 }
 
-/** True only for a `.../crm/functions/standalone/standalone.<api>.ds` path. */
-export function isStandalonePath(fsPath: string): boolean {
+/** True for any Deluge function path under `.../crm/functions/...` across all categories. */
+export function isFunctionPath(fsPath: string): boolean {
     const norm = String(fsPath).replace(/\\/g, '/').toLowerCase();
-    return /\/crm\/functions\/standalone\/standalone\.[^/]+\.ds$/.test(norm);
+    return /\/crm\/functions\/[^/]+\/[^/]+\.ds$/.test(norm);
 }
+
+/** Backward-compatible alias for function path detection. */
+export const isStandalonePath = isFunctionPath;
+
 
 /** Parse `<ns>.<api>.ds` → api_name (multi-dot api preserved). */
 export function deriveApiNameFromPath(fsPath: string): string | undefined {

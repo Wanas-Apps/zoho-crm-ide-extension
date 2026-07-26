@@ -1,4 +1,4 @@
-import apiClient = require('@wanasapps/zcrm-core/src/utils/apiClient');
+import apiClient = require('wanas-zcrm-extractor/src/utils/apiClient');
 
 /**
  * Identity of the signed-in Zoho user + org, used to label the session and bind

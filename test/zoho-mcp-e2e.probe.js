@@ -50,7 +50,7 @@ const ctxFactory = () => ({
 
     const list = await client.listTools();
     const names = list.tools.map((t) => t.name);
-    ok('lists all 13 tools', names.length === 13);
+    ok('lists all 56 tools', names.length === 56);
     ok('includes a read tool (zoho_query_records)', names.includes('zoho_query_records'));
     ok('includes a write tool (zoho_create_record)', names.includes('zoho_create_record'));
 
@@ -80,5 +80,10 @@ const ctxFactory = () => ({
     await handle.dispose();
 
     console.log(`\nTotal: ${pass + fail}  PASS: ${pass}  FAIL: ${fail}`);
-    process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error('PROBE CRASHED:', e.stack || e); process.exit(1); });
+    // process.exit() here races libuv's async-handle close on Windows (the
+    // uv_async_send assertion in win/async.c) while undici sockets from the
+    // HTTP transports are still tearing down. Set exitCode and let the loop
+    // drain instead; the unref'd watchdog force-exits only if something hangs.
+    process.exitCode = fail ? 1 : 0;
+})().catch((e) => { console.error('PROBE CRASHED:', e.stack || e); process.exitCode = 1; })
+    .finally(() => setTimeout(() => process.exit(process.exitCode ?? 0), 10_000).unref());

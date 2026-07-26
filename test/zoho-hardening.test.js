@@ -42,7 +42,7 @@ const selfClient = require('../out/zoho/selfClientFallback.js');
 const { MetadataIndex } = require('../out/zoho/metadataIndex.js');
 const { WorkspaceConfigStore } = require('../out/zoho/configStore.js');
 
-const SAMPLE = path.resolve('D:/Projects/Zoho CRM V8 Metadata Extractor/test_metadata');
+const SAMPLE = path.resolve('D:/Projects/Zoho CRM Tools/wanas-zcrm-extractor/test_metadata');
 
 (async () => {
     console.log('\n-- retention --');

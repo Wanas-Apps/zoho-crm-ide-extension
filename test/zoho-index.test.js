@@ -19,7 +19,7 @@ function ok(name, cond) {
 const { MetadataIndex, buildFunctionGroups } = require('../out/zoho/metadataIndex.js');
 const { analyzeOrgContext } = require('../out/providers/orgContext.js');
 
-const SAMPLE = path.resolve('D:/Projects/Zoho CRM V8 Metadata Extractor/test_metadata');
+const SAMPLE = path.resolve('D:/Projects/Zoho CRM Tools/wanas-zcrm-extractor/test_metadata');
 
 (async () => {
     console.log('\n-- MetadataIndex (real sample pull) --');

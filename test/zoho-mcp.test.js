@@ -89,6 +89,21 @@ function mkFetch(resp = {}) {
 
         await api.orgInfo();
         ok('orgInfo → GET /crm/v8/org', last(calls).url.endsWith('/crm/v8/org'));
+
+        await api.rawRequest('GET', '/crm/v8/users');
+        ok('rawRequest → GET /crm/v8/users', last(calls).url.endsWith('/crm/v8/users') && last(calls).init.method === 'GET');
+
+        await api.listVariables();
+        ok('listVariables → GET /settings/variables', last(calls).url.endsWith('/crm/v8/settings/variables'));
+
+        await api.listTags('Leads');
+        ok('listTags → GET /settings/tags?module=Leads', last(calls).url.endsWith('/crm/v8/settings/tags?module=Leads'));
+
+        await api.listUsers('ActiveUsers');
+        ok('listUsers → GET /users?type=ActiveUsers', last(calls).url.includes('/users?type=ActiveUsers'));
+
+        await api.listWorkflows('Leads');
+        ok('listWorkflows → GET /settings/automation/workflow_rules?module=Leads', last(calls).url.includes('/workflow_rules?module=Leads'));
     }
 
     console.log('\n-- MCP tools (registry + confirm-gate) --');
@@ -97,7 +112,7 @@ function mkFetch(resp = {}) {
         const tools = buildTools();
         const byName = (n) => tools.find((t) => t.name === n);
 
-        ok('exposes 13 tools', tools.length === 13);
+        ok('exposes 56 tools', tools.length === 56);
         ok('reads are not gated, writes are', byName('zoho_query_records').kind === 'read' && byName('zoho_create_record').kind === 'write' && byName('zoho_run_standalone').kind === 'write');
         ok('every tool has a zod schema + run', tools.every((t) => t.schema && typeof t.run === 'function'));
 
@@ -182,6 +197,171 @@ function mkFetch(resp = {}) {
         const after = await sf.readSessionFile(tmp);
         ok('updateSessionTokens merges + preserves proxy', after.tokens.access_token === 'A2' && after.proxy.url.includes('proxy') && after.tokens.refresh_token === 'R');
         fs.unlinkSync(tmp);
+    }
+
+    console.log('\n-- per-org sessions --');
+    {
+        const sf = require('../out/zoho/mcp/sessionFile.js');
+        const path = require('path');
+
+        // org-keyed path: ~/.zoho-crm-ide/sessions/<dc>-<orgId>.json
+        const p = sf.orgSessionPath('eu', '7005000123', '/home/u');
+        ok('orgSessionPath keys by dc + orgId under sessions/', /sessions[\\/]eu-7005000123\.json$/.test(p) && p.includes('.zoho-crm-ide'));
+        const hostile = sf.orgSessionPath('com', '..\\..\\evil/../x', '/home/u');
+        ok('orgSessionPath sanitizes hostile org ids', path.basename(hostile) === hostile.slice(hostile.length - path.basename(hostile).length) && !/\.\./.test(path.basename(hostile)));
+
+        // org claim travels in the file
+        const withOrg = sf.buildSessionFile({
+            dc: 'com',
+            proxy: { url: 'https://proxy.example/exec' },
+            tokens: { refresh_token: 'R' },
+            org: { id: '7005000123', name: 'Acme' },
+            now: '2026-06-10T00:00:00Z'
+        });
+        ok('buildSessionFile carries the org claim', withOrg.org && withOrg.org.id === '7005000123' && withOrg.org.name === 'Acme');
+        let stillOk = true;
+        try { sf.assertUsableSession(withOrg); } catch { stillOk = false; }
+        ok('org claim does not break assertUsableSession', stillOk);
+    }
+
+    console.log('\n-- org guard (wrong-org protection) --');
+    {
+        const og = require('../out/zoho/mcp/orgGuard.js');
+
+        // startup pin check (pure, no network)
+        let okPin = true;
+        try { og.assertOrgPin('123', ''); og.assertOrgPin(undefined, ''); } catch { okPin = false; }
+        ok('no pin → any claim accepted', okPin);
+        let okMatch = true;
+        try { og.assertOrgPin('123', '123'); } catch { okMatch = false; }
+        ok('pin matches claim → accepted', okMatch);
+        let mm = '';
+        try { og.assertOrgPin('999', '123'); } catch (e) { mm = e.message; }
+        ok('pin vs claim mismatch → throws with both ids', /123/.test(mm) && /999/.test(mm));
+        let noClaim = '';
+        try { og.assertOrgPin(undefined, '123'); } catch (e) { noClaim = e.message; }
+        ok('pin but claimless session → throws re-export hint', /re-?export/i.test(noClaim));
+
+        // org id extraction from /crm/v8/org response
+        ok('extractOrgId reads zorg_id as string', og.extractOrgId({ org: [{ zorg_id: 7005000123 }] }) === '7005000123');
+        ok('extractOrgId tolerates empty/missing', og.extractOrgId({}) === '' && og.extractOrgId(undefined) === '');
+
+        // lazy org guard: resolve expected org on first use, memoize success,
+        // retry after transient failure
+        {
+            let calls = 0;
+            const guard = og.createOrgGuard({
+                claimedOrgId: '123',
+                resolveExpectedOrgId: async () => '123',
+                fetchLiveOrgId: async () => { calls++; return '123'; }
+            });
+            await guard();
+            await guard();
+            ok('guard verifies once and memoizes success', calls === 1);
+        }
+        {
+            const guard = og.createOrgGuard({
+                claimedOrgId: '123',
+                resolveExpectedOrgId: async () => '123',
+                fetchLiveOrgId: async () => '999'
+            });
+            let code = '';
+            try { await guard(); } catch (e) { code = e.code; }
+            ok('live org mismatch → ORG_MISMATCH', code === 'ORG_MISMATCH');
+        }
+        {
+            // a project-resolved expected org that contradicts the session claim
+            // refuses BEFORE any live fetch (the wrong session file is loaded)
+            let liveCalls = 0;
+            const guard = og.createOrgGuard({
+                claimedOrgId: '123',
+                resolveExpectedOrgId: async () => '999',
+                fetchLiveOrgId: async () => { liveCalls++; return '999'; }
+            });
+            let code = '';
+            try { await guard(); } catch (e) { code = e.code; }
+            ok('resolved org vs claim mismatch → ORG_MISMATCH before live fetch', code === 'ORG_MISMATCH' && liveCalls === 0);
+        }
+        {
+            // unbound (no pin, no pointer, no claim) → legacy mode, no live fetch
+            let liveCalls = 0;
+            let warned = '';
+            const guard = og.createOrgGuard({
+                claimedOrgId: undefined,
+                resolveExpectedOrgId: async () => '',
+                fetchLiveOrgId: async () => { liveCalls++; return '1'; },
+                log: (m) => { warned = m; }
+            });
+            await guard();
+            ok('fully unbound session passes without a live fetch + warns', liveCalls === 0 && /org/i.test(warned));
+        }
+        {
+            // claim only (no pin/pointer) → live must match the claim
+            const guard = og.createOrgGuard({
+                claimedOrgId: '123',
+                resolveExpectedOrgId: async () => '',
+                fetchLiveOrgId: async () => '999'
+            });
+            let code = '';
+            try { await guard(); } catch (e) { code = e.code; }
+            ok('claim-only binding still live-checks', code === 'ORG_MISMATCH');
+        }
+        {
+            let calls = 0;
+            const guard = og.createOrgGuard({
+                claimedOrgId: '123',
+                resolveExpectedOrgId: async () => '123',
+                fetchLiveOrgId: async () => { calls++; if (calls === 1) { throw new Error('net down'); } return '123'; }
+            });
+            let firstFailed = false;
+            try { await guard(); } catch { firstFailed = true; }
+            await guard();
+            ok('transient fetch error is not memoized — retries then passes', firstFailed && calls === 2);
+        }
+    }
+
+    console.log('\n-- project org pointer (.zoho-crm-ide.json) --');
+    {
+        const po = require('../out/zoho/mcp/projectOrg.js');
+        const path = require('path');
+        const os = require('os');
+        const fs = require('fs');
+
+        // parsing
+        const good = JSON.stringify({ v: 1, org_id: '7005000123', dc: 'eu', org_name: 'Acme' });
+        const parsed = po.parseProjectOrg(good);
+        ok('parseProjectOrg reads org_id/dc/org_name', parsed && parsed.orgId === '7005000123' && parsed.dc === 'eu' && parsed.name === 'Acme');
+        ok('parseProjectOrg rejects missing org_id', po.parseProjectOrg(JSON.stringify({ v: 1, dc: 'com' })) === undefined);
+        ok('parseProjectOrg rejects non-JSON', po.parseProjectOrg('not json {') === undefined);
+        const numeric = po.parseProjectOrg(JSON.stringify({ v: 1, org_id: 7005000123, dc: 'com' }));
+        ok('parseProjectOrg coerces numeric org_id to string', !!numeric && numeric.orgId === '7005000123');
+
+        // writer round-trips through the parser
+        const body = po.buildProjectOrgJson({ orgId: '42', dc: 'com', name: 'X' });
+        const roundTrip = po.parseProjectOrg(body);
+        ok('buildProjectOrgJson round-trips', !!roundTrip && roundTrip.orgId === '42' && roundTrip.dc === 'com');
+
+        // discovery: same dir, walk-up from a nested dir, not found
+        const base = fs.mkdtempSync(path.join(os.tmpdir(), 'zoho-proj-'));
+        const nested = path.join(base, 'a', 'b');
+        fs.mkdirSync(nested, { recursive: true });
+        fs.writeFileSync(path.join(base, po.PROJECT_ORG_FILE), good, 'utf8');
+        const hitSame = await po.findProjectOrg(base);
+        ok('findProjectOrg finds the file in the start dir', !!hitSame && hitSame.org.orgId === '7005000123' && hitSame.dir === base);
+        const hitUp = await po.findProjectOrg(nested);
+        ok('findProjectOrg walks up to a parent', !!hitUp && hitUp.org.orgId === '7005000123');
+        const lonely = fs.mkdtempSync(path.join(os.tmpdir(), 'zoho-none-'));
+        ok('findProjectOrg returns undefined when absent', (await po.findProjectOrg(lonely)) === undefined);
+        fs.rmSync(base, { recursive: true, force: true });
+        fs.rmSync(lonely, { recursive: true, force: true });
+
+        // MCP roots → candidate dirs
+        const dirs = po.rootsToDirs([
+            { uri: 'file:///D:/Projects/Demo' },
+            { uri: 'https://example.com/not-a-file' },
+            { name: 'no uri at all' }
+        ]);
+        ok('rootsToDirs converts file URIs and skips the rest', dirs.length === 1 && /Demo$/.test(dirs[0]));
     }
 
     console.log('\n----------------------------------------');

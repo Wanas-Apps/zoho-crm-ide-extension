@@ -17,6 +17,13 @@
 declare module '@modelcontextprotocol/sdk/server/mcp.js' {
     export class McpServer {
         constructor(serverInfo: { name: string; version: string });
+        /** Underlying protocol server — used for client-capability requests (roots). */
+        readonly server: {
+            listRoots(
+                params?: unknown,
+                options?: { timeout?: number }
+            ): Promise<{ roots?: Array<{ uri?: string; name?: string }> }>;
+        };
         registerTool(name: string, config: unknown, cb: unknown): unknown;
         connect(transport: unknown): Promise<void>;
         close(): Promise<void>;

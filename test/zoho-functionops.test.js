@@ -47,8 +47,8 @@ const mkOps = (svc, over) => new fnops.FunctionOps(Object.assign({
 
 (async () => {
     console.log('\n-- path / name helpers --');
-    ok('isStandalonePath true for the standalone tree (both seps)', fnops.isStandalonePath('C:/p/crm/functions/standalone/standalone.Foo.ds') && fnops.isStandalonePath('C:\\p\\crm\\functions\\standalone\\standalone.A.ds'));
-    ok('isStandalonePath false for automation / untitled / bare', !fnops.isStandalonePath('/p/crm/functions/automation/automation.A.ds') && !fnops.isStandalonePath('/p/scratch.ds'));
+    ok('isStandalonePath true for all function categories (standalone, automation, button, schedule, etc.)', fnops.isStandalonePath('C:/p/crm/functions/standalone/standalone.Foo.ds') && fnops.isStandalonePath('C:/p/crm/functions/automation/automation.Bar.ds') && fnops.isStandalonePath('C:/p/crm/functions/button/button.Btn.ds'));
+    ok('isStandalonePath false for non-function paths', !fnops.isStandalonePath('/p/scratch.ds') && !fnops.isStandalonePath('/p/other/foo.txt'));
     ok('deriveApiNameFromPath parses <ns>.<api>.ds', fnops.deriveApiNameFromPath('/p/standalone.Get_Assistants.ds') === 'Get_Assistants' && fnops.deriveApiNameFromPath('/p/standalone.a.b.ds') === 'a.b' && fnops.deriveApiNameFromPath('/p/foo.ds') === 'foo');
     ok('deriveNamespaceFromPath', fnops.deriveNamespaceFromPath('/p/standalone.Foo.ds') === 'standalone' && fnops.deriveNamespaceFromPath('/p/foo.ds') === undefined);
     ok('needsPushBeforeRun true when no category (not on org yet)', fnops.needsPushBeforeRun({ category: null }) === true && fnops.needsPushBeforeRun({ category: undefined }) === true);

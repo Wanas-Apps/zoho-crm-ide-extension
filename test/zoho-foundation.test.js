@@ -83,7 +83,7 @@ function ok(name, cond) {
 const { SecretStorageStore } = require('../out/zoho/secretStore.js');
 const { WorkspaceConfigStore } = require('../out/zoho/configStore.js');
 const { CredentialProvider } = require('../out/zoho/credentialProvider.js');
-const authModule = require('@wanasapps/zcrm-core/src/services/authService');
+const authModule = require('wanas-zcrm-extractor/src/services/authService');
 const { AuthService } = authModule;
 
 const KEY = 'zohoDeluge.connection:aaaa';

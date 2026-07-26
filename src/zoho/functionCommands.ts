@@ -49,14 +49,14 @@ export function registerFunctionCommands(context: vscode.ExtensionContext, deps:
 async function runFunction(arg: FunctionCommandArg, deps: FunctionCommandDeps): Promise<void> {
     const target = resolveDsUri(arg);
     if (!target) {
-        void vscode.window.showWarningMessage('Open a standalone Deluge (.ds) function to run.');
+        void vscode.window.showWarningMessage('Open a Deluge (.ds) function to run.');
         return;
     }
     try {
         let resolved = await deps.ops.resolveForRun(target.fsPath);
 
         // A function that exists locally but not yet on the org can't be tested
-        // (Zoho's test endpoint requires an existing standalone function). Offer
+        // (Zoho's test endpoint requires an existing function). Offer
         // to push/create it first, then run against the now-live function.
         if (needsPushBeforeRun(resolved)) {
             const pushed = await pushBeforeRun(target, resolved.apiName, deps);
@@ -70,8 +70,9 @@ async function runFunction(arg: FunctionCommandArg, deps: FunctionCommandDeps): 
         if (args === undefined) {
             return; // cancelled
         }
+        const fnIdentifier = `${resolved.namespace || 'standalone'}.${resolved.apiName}`;
         const confirm = await vscode.window.showWarningMessage(
-            `Run "standalone.${resolved.apiName}" on your LIVE Zoho org? It executes the function — it may create/update records, send email/SMS, and consume credits.`,
+            `Run "${fnIdentifier}" on your LIVE Zoho org? It executes the function — it may create/update records, send email/SMS, and consume credits.`,
             { modal: true },
             'Run on live org'
         );
@@ -79,16 +80,16 @@ async function runFunction(arg: FunctionCommandArg, deps: FunctionCommandDeps): 
             return;
         }
         const result = await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: `Running standalone.${resolved.apiName}…`, cancellable: false },
+            { location: vscode.ProgressLocation.Notification, title: `Running ${fnIdentifier}…`, cancellable: false },
             () => deps.ops.run(resolved, args)
         );
         deps.output.appendLine(renderTestResult(result));
         deps.output.show(true);
         if (result.success) {
-            void vscode.window.showInformationMessage(`Run succeeded: standalone.${resolved.apiName}.`);
+            void vscode.window.showInformationMessage(`Run succeeded: ${fnIdentifier}.`);
         } else {
             void vscode.window
-                .showWarningMessage(`Run reported a failure for standalone.${resolved.apiName}.`, 'Show Output')
+                .showWarningMessage(`Run reported a failure for ${fnIdentifier}.`, 'Show Output')
                 .then((pick) => {
                     if (pick === 'Show Output') {
                         deps.output.show(true);

@@ -1,4 +1,4 @@
-import crmMetadataService = require('@wanasapps/zcrm-core/src/services/metadata/crmMetadataService');
+import crmMetadataService = require('wanas-zcrm-extractor/src/services/metadata/crmMetadataService');
 import { SyncLock } from './syncLock';
 
 /** Minimal extractor contract (the bridged crmMetadataService.extract). */

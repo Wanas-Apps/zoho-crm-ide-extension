@@ -10,7 +10,7 @@ import { URL } from 'url';
  * authorization `code` (or a refresh/revoke request) to a backend proxy that
  * adds the secret server-side (see `oauth-proxy/index.js`).
  *
- * The trick that avoids editing the published `@wanasapps/zcrm-core` AuthService:
+ * The trick that avoids editing the shared `wanas-zcrm-extractor` AuthService:
  * we inject an axios-shaped `http` port into the AuthService. The AuthService
  * still builds its usual `client_id/client_secret` token requests, but this
  * adapter intercepts the three token-endpoint URLs and re-dispatches them to the

@@ -11,13 +11,16 @@ import { MetadataIndex } from './metadataIndex';
 import { SnapshotStore } from './snapshotStore';
 import { ConflictGuard } from './conflictGuard.vscode';
 import { fetchRemoteCode } from './remoteCode';
-import { formatDeluge } from '@wanasapps/zcrm-core/src/utils/delugeFormatter';
+import { formatDeluge } from 'wanas-zcrm-extractor/src/utils/delugeFormatter';
 import { FunctionOps } from './functionOps';
 import { functionServicePort } from './functionServiceBridge';
 import { registerFunctionCommands, updateStandaloneContext } from './functionCommands';
 import { registerZohoTreeViews } from './treeViews';
 import { registerZohoSourceControl } from './sourceControl';
 import { activateMcp } from './mcp/mcpActivate';
+import { CustomizationBridge } from './customizationBridge';
+import { registerCustomizationCommands } from './customizationCommands';
+import { registerApiCommands } from './apiCommands';
 
 /**
  * Wire up the Zoho connection, the AuthenticationProvider (native Accounts
@@ -78,6 +81,23 @@ export function activateZoho(context: vscode.ExtensionContext, metadataIndex: Me
         registerFunctionCommands(context, { ops: functionOps, output: connection.output, conflictGuard });
         context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((ed) => updateStandaloneContext(ed)));
         updateStandaloneContext(vscode.window.activeTextEditor);
+
+        // --- Customization operations (Modules, Fields, Layouts) -------------
+        const customizationBridge = new CustomizationBridge({
+            isAuthenticated: () => connection.isAuthenticated()
+        });
+        registerCustomizationCommands(context, {
+            bridge: customizationBridge,
+            output: connection.output,
+            index: metadataIndex
+        });
+
+        // --- CLI parity API commands (Universal API, COQL, Audit Log, etc.) ----
+        registerApiCommands(context, {
+            output: connection.output,
+            isAuthenticated: () => connection.isAuthenticated(),
+            getOutputDir: () => connection.outputDir
+        });
 
         // --- Embedded MCP server (M11): expose org tools to LLM agents ----------
         activateMcp(context, { connection, functionOps });

@@ -28,6 +28,9 @@ export interface SessionFile {
     dc: string;
     /** Present in proxy mode (the supported external-MCP path). */
     proxy?: { url: string; token?: string };
+    /** Org the session was exported from — the claim the stdio server's
+     *  wrong-org guard (orgGuard.ts) checks against. */
+    org?: { id: string; name?: string };
     tokens: SessionTokens;
     exported_at?: string;
 }
@@ -35,6 +38,18 @@ export interface SessionFile {
 /** Default location of the shared-session file (override with $ZOHO_MCP_SESSION). */
 export function defaultSessionPath(home: string = os.homedir()): string {
     return path.join(home, '.zoho-crm-ide', 'session.json');
+}
+
+/** Filename-safe segment: org ids are digits and dcs are like "com.cn", but
+ *  never trust either as a path component (no dots → no traversal). */
+function fileSafe(segment: string): string {
+    return String(segment).replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+/** Org-keyed session location: ~/.zoho-crm-ide/sessions/<dc>-<orgId>.json.
+ *  One file per org so exporting org B never clobbers org A's session. */
+export function orgSessionPath(dc: string, orgId: string, home: string = os.homedir()): string {
+    return path.join(home, '.zoho-crm-ide', 'sessions', `${fileSafe(dc)}-${fileSafe(orgId)}.json`);
 }
 
 /** Resolve the session path: explicit arg → $ZOHO_MCP_SESSION → default. */
@@ -68,6 +83,7 @@ export function assertUsableSession(s: SessionFile | undefined | null): asserts 
 export function buildSessionFile(input: {
     dc: string;
     proxy?: { url: string; token?: string };
+    org?: { id: string; name?: string };
     tokens: SessionTokens;
     now: string;
 }): SessionFile {
@@ -75,6 +91,7 @@ export function buildSessionFile(input: {
         v: SESSION_FILE_VERSION,
         dc: input.dc,
         proxy: input.proxy,
+        org: input.org,
         tokens: {
             refresh_token: input.tokens.refresh_token,
             access_token: input.tokens.access_token,
