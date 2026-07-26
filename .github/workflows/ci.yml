@@ -16,6 +16,9 @@ jobs:
         with:
           node-version: 20
 
+      - name: Configure git HTTPS
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+
       - name: Install dependencies
         run: npm ci
 
