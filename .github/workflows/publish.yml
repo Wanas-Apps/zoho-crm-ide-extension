@@ -24,13 +24,13 @@ jobs:
         with:
           node-version: 20
 
-      - name: Configure git HTTPS
-        run: |
-          git config --global url."https://x-access-token:${{ secrets.OPEN_VSX_TOKEN || secrets.GITHUB_TOKEN }}@github.com/".insteadOf "ssh://git@github.com/"
-          git config --global url."https://x-access-token:${{ secrets.OPEN_VSX_TOKEN || secrets.GITHUB_TOKEN }}@github.com/".insteadOf "git@github.com:"
-          git config --global url."https://x-access-token:${{ secrets.OPEN_VSX_TOKEN || secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-
       - name: Install dependencies
+        env:
+          GIT_CONFIG_COUNT: '2'
+          GIT_CONFIG_KEY_0: 'url.https://github.com/.insteadOf'
+          GIT_CONFIG_VALUE_0: 'ssh://git@github.com/'
+          GIT_CONFIG_KEY_1: 'url.https://github.com/.insteadOf'
+          GIT_CONFIG_VALUE_1: 'git@github.com:'
         run: npm ci
 
       - name: Compile & Package
