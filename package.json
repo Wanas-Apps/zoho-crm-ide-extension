@@ -2,7 +2,7 @@
   "name": "zoho-crm-ide-extension",
   "displayName": "Zoho CRM IDE Extension",
   "description": "Turn VS Code into a Zoho CRM IDE: Deluge language IntelliSense, in-editor Zoho login, org metadata sync, and Run/Pull/Push for standalone functions.",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "publisher": "wanas-apps",
   "author": {
     "name": "Wanas Apps",
